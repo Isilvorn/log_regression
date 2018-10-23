@@ -4,6 +4,8 @@
 
 using namespace std;
 
+#define FEATURES 9
+
 int main(int argv, char **argc) {
   ifstream infile;
   ofstream outfile1, outfile2, outfile3;
@@ -31,7 +33,7 @@ int main(int argv, char **argc) {
 		  if (outfile3.is_open()) {
 			while (!infile.eof()) {
 			  infile >> id;
-			  for (int i=0; i<9; i++) {
+			  for (int i=0; i<FEATURES; i++) {
 				infile >> c;
 				c = infile.peek();
 				if      (c == EOF)   break;
@@ -47,7 +49,7 @@ int main(int argv, char **argc) {
 			  ndata++;
 			}
 
-			outfile3 << ndata << endl;
+			outfile3 << FEATURES << " " << ndata << endl;
 			for (int i=0; i<ndata; i++) outfile3 << "0.5" << " ";
 			outfile3 << endl;
 

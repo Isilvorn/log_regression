@@ -127,16 +127,21 @@ int getsoln(Dvect &w, Dvect &y, Dvect *x, double epsilon, int maxiter) {
 */
 bool read_input(char **argc, Dvect &w, Dvect &y, Dvect **x, bool verbose) {
   ifstream infile;
-
-  *x = new Dvect[20];
-  for (int i=0; i<20; i++) (*x)[i].resize(10);
-  w.resize(10);
-  y.resize(20);
+  int      nFeatures, nExamples;
 
   // reading in initial weights file
   infile.open(argc[1]);
   if (infile.is_open()) {
 	if (verbose) cout << "Reading in data files..." << endl;
+	
+	infile >> nFeatures >> nExamples;
+	cout << "  (" << nFeatures << " features, " 
+		 << nExamples << " examples)" << endl;
+	*x = new Dvect[nExamples];
+	for (int i=0; i<nExamples; i++) (*x)[i].resize(nFeatures);
+	w.resize(nFeatures);
+	y.resize(nExamples);
+
 	infile >> w;
 	infile.close();
 	if (verbose) cout << "Initial Weights = " << w << endl;
