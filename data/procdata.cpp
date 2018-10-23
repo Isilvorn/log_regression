@@ -41,6 +41,7 @@ int main(int argv, char **argc) {
 				else                 infile >> n;
 				outfile2 << n << " ";
 			  }
+			  if (c == EOF) break;
 			  outfile2 << endl;
 			  infile >> c >> n;
 			  if (n == 2) n = 0;

@@ -1,4 +1,5 @@
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 #include <math.h>
 
@@ -96,7 +97,7 @@ int main(int argv, char **argc) {
 int getsoln(Dvect &w, Dvect &y, Dvect *x, double epsilon, int maxiter) {
   int    i;            // counter
   double ll, ll_old;   // objective function values
-  double alpha = 0.1;  // speed at which to converge using the gradient
+  double alpha = 0.001;// speed at which to converge using the gradient
   Dvect  dk(w.size()); // temp variable for the gradient
 
   ll = ll_old = 0.0;
@@ -154,16 +155,21 @@ bool read_input(char **argc, Dvect &w, Dvect &y, Dvect **x, bool verbose) {
 
 	  infile.open(argc[3]);
 	  if (infile.is_open()) {
-		for (int i=0; i<20; i++) infile >> (*x)[i];
+		for (int i=0; i<nExamples; i++) infile >> (*x)[i];
 		infile.close();
 		if (verbose) cout << "Features:" << endl;
-		if (verbose) for (int i=0; i<20; i++) cout << (*x)[i] << endl;
+		if (verbose) 
+		  for (int i=0; i<nExamples; i++) 
+			cout << setw(5) << i << ": " << (*x)[i] << endl;
 		}
-	  else { cerr << "Bad input file name (x-data)." << endl; return false; }
+	  else 
+		{ cerr << "Bad input file name (x-data)." << endl; return false; }
 	}
-	else { cerr << "Bad input file name (y-data)." << endl; return false; }
+	else 
+	  { cerr << "Bad input file name (y-data)." << endl; return false; }
   }
-  else { cerr << "Bad input file name (weights)." << endl; return false; }
+  else 
+	{ cerr << "Bad input file name (weights)." << endl; return false; }
   
   return true;
 }
