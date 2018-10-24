@@ -36,14 +36,21 @@ public:
   bool   resize(int);              // discards the data and sets the vector size to a new value
   bool   copy(const Dvect&);       // copies the data from an input vector to this one
   double sum(void);                // returns the summation of all elements of this vector
+  void   exp_elem(void);           // takes the exponential function of every element
+  void   apply_threshold(double);  // sets values >= threshold to 1 and < threshold to 0
 
   friend ostream& operator<<(ostream&,const Dvect&); // outputs all elements to a stream
   friend istream& operator>>(istream&, Dvect&);      // inputs n elements from a stream
 
 private:
   double *a;                       // the array for the vector data
-  int    sz;                       // the size of the vector
+  int     sz;                      // the size of the vector
 };
+
+#define TP 0 // true positive
+#define FP 1 // false positive
+#define FN 2 // false negative
+#define TN 3 // true negative
 
 // read_input reads the input files and stores the data in the Dvect class
 bool   read_input(char **, Dvect&, Dvect&, Dvect**, bool=true);
@@ -58,10 +65,16 @@ void   getnext(Dvect&, Dvect&, double);
 // iterate to a solution: 
 // getsoln(weights, y-objserved, features, delta-criteria, max-iterations)
 int    getsoln(Dvect&, Dvect&, Dvect*, double=0.001, int=100);
+// calculates True Positives (TP), False Positives (FP), True Negatives(TN),
+// and False Negatives (FN)
+void   calc_conf(Dvect&, Dvect&, Dvect&);
+// generates a confusion matrix based on y-observed and y-calculated
+// get_conf_matrix(y-observed, y-calculated)
+void   gen_conf_matrix(Dvect&, Dvect&);
 
 int main(int argv, char **argc) {
 
-  cout << "Executing logr with command line arguments: ";
+  cout << endl << "Executing logr with command line arguments: " << endl << "  ";
   for (int i=0; i<argv; i++)
 	cout << argc[i] << " ";
   cout << endl;
@@ -69,17 +82,36 @@ int main(int argv, char **argc) {
   Dvect    wvec;          // weights input file
   Dvect    yvec;          // observed y-values
   Dvect   *xvec;          // features (array size is number of data points supported)
-  Dvect    lvec;          // log liklihood function components
+  Dvect    lvec;          // reults (liklihood) with threshold applied
+  Dvect    cvec;          // confusion vector
   int      niter;         // number of iterations used
+  double   logl;          // the aggregate log-liklihood
 
   if (argv == 4) {
-	if (read_input(argc, wvec, yvec, &xvec)) {
-	  niter = getsoln(wvec, yvec, xvec, 0.01, 1000);
-	  cout << "Solution after " << niter << " iterations: " << endl;
+	if (read_input(argc, wvec, yvec, &xvec, false)) {
+	  niter = getsoln(wvec, yvec, xvec, 0.001, 10000);
+	  cout << endl << "Solution after " << niter << " iterations: " << endl;
 	  cout << wvec << endl;
-	  cout << "Log Liklihood:" << endl;
+	  cout << "Observed y-values:" << endl << yvec << endl << endl;
+	  cout << "Results (liklihood):" << endl;
 	  LLcomp(lvec, wvec, yvec, xvec);
-	  cout << lvec << " = " << lvec.sum() << endl;
+	  logl = lvec.sum();
+	  lvec.exp_elem();
+	  lvec.apply_threshold(0.999);
+	  cout << setprecision(0) << fixed << lvec << " => " << logl << endl;
+	  calc_conf(cvec,yvec,lvec);
+	  cout << endl << "Confusion numbers:" << endl;
+	  cout << setprecision(1) << fixed;
+	  cout << "  TP: " << setw(5) << 100*(cvec[TP]/(cvec[TP]+cvec[FP])) 
+		   << "% (" << (int)cvec[TP] << ")" << endl;
+	  cout << "  FP: " << setw(5) << 100*(cvec[FP]/(cvec[TP]+cvec[FP])) 
+		   << "% (" << (int)cvec[FP] << ")" << endl;
+	  cout << "  TN: " << setw(5) << 100*(cvec[TN]/(cvec[TN]+cvec[FN])) 
+		   << "% (" << (int)cvec[TN] << ")" << endl;
+	  cout << "  FN: " << setw(5) << 100*(cvec[FN]/(cvec[TN]+cvec[FN])) 
+		   << "% (" << (int)cvec[FN] << ")" << endl;
+	  cout << "             =====" << endl;
+	  cout << "              " << (int)(cvec[TP]+cvec[FP]+cvec[FN]+cvec[TN]) << endl << endl;
 	}
   }
   else {
@@ -102,24 +134,41 @@ int getsoln(Dvect &w, Dvect &y, Dvect *x, double epsilon, int maxiter) {
 
   ll = ll_old = 0.0;
   for (i=0; i<maxiter; i++) {
-	//cout << endl;
-	//cout << "Iteration #" << i << endl;
-	//cout << "============" << endl;
 	grad(dk, w, y, x);
-	//cout << "  Gradient: " << dk << endl;
-	//gradest(dk, w, y, x);
-	//cout << "  Gradient Est: " << dk << endl;
 	ll_old = ll;
 	ll     = LL(w, y, x);
     if (fabs(ll_old-ll) < epsilon) break;
-	//cout << "  Objective function: " << ll << endl;
-	//cout << "  diff:               " << fabs(ll_old-ll) << endl;
 	getnext(w, dk, alpha);
-	//cout << "  New weights: " << w << endl;
   }
 
   return i;
 
+}
+
+/*
+** The gen_conf_matrix() function calculates and displays (to stdout) a
+** confusion matrix using the observed y values and the calculated y-values
+** as inputs.
+*/
+void gen_conf_matrix(Dvect &yo, Dvect &yc) {
+
+}
+
+/*
+** The gen_conf_matrix() function calculates and displays (to stdout) a
+** confusion matrix using the observed y values and the calculated y-values
+** as inputs.
+*/
+void calc_conf(Dvect &conf, Dvect &yo, Dvect &yc) {
+  conf.resize(4);
+  if (yo.size() == yc.size()) {
+	for (int i=0; i<yo.size(); i++) {
+	  if ((yo[i] == 1) && (yc[i] == 1)) conf[TP]++; // true positives
+	  if ((yo[i] == 0) && (yc[i] == 1)) conf[FP]++; // false positives
+	  if ((yo[i] == 1) && (yc[i] == 0)) conf[FN]++; // false negatives
+	  if ((yo[i] == 0) && (yc[i] == 0)) conf[TN]++; // true negatives
+	}
+  }
 }
 
 /*
@@ -456,4 +505,19 @@ double Dvect::sum(void) {
   double sum=0.0;
   for (int i=0; i<sz; i++) sum+=a[i];
   return sum;
+}
+
+/*
+** The exp() function takes the exponential function of every element.
+*/
+void Dvect::exp_elem(void) {
+  for (int i=0; i<sz; i++) a[i] = exp(a[i]);
+}
+
+/*
+** The apply_threshold() function sets values greater than or equal to
+** the threshold to one and values less than the threshold to zero.
+*/
+void Dvect::apply_threshold(double d) {
+  for (int i=0; i<sz; i++) a[i] = (a[i] >= d)?1.0:0.0;
 }
