@@ -1,6 +1,7 @@
 #include <iostream>
 #include <iomanip>
 #include <fstream>
+#include <random>
 #include <math.h>
 
 using namespace std;
@@ -68,9 +69,11 @@ int    getsoln(Dvect&, Dvect&, Dvect*, double=0.001, int=100);
 // calculates True Positives (TP), False Positives (FP), True Negatives(TN),
 // and False Negatives (FN)
 void   calc_conf(Dvect&, Dvect&, Dvect&);
-// generates a confusion matrix based on y-observed and y-calculated
-// get_conf_matrix(y-observed, y-calculated)
-void   gen_conf_matrix(Dvect&, Dvect&);
+// randomly splits the x-matrix (features) into two subsets of the data
+// xvec_split(input-xmatrix, input-ymatrix, fraction-to-matrix1, input-size, 
+//            x-matrix1-output, x-matrix2-output, y-matrix1-output,
+//            y-matrix2-output)
+int xmat_split(Dvect*, Dvect&, double, Dvect**, Dvect**, Dvect&, Dvect&);
 
 int main(int argv, char **argc) {
 
@@ -79,28 +82,59 @@ int main(int argv, char **argc) {
 	cout << argc[i] << " ";
   cout << endl;
 
-  Dvect    wvec;          // weights input file
-  Dvect    yvec;          // observed y-values
-  Dvect   *xvec;          // features (array size is number of data points supported)
-  Dvect    lvec;          // reults (liklihood) with threshold applied
-  Dvect    cvec;          // confusion vector
-  int      niter;         // number of iterations used
-  double   logl;          // the aggregate log-liklihood
+  Dvect    wvec;            // weights input file
+  Dvect    yvec;            // observed y-values
+  Dvect    yvec1;           // observations subset #1
+  Dvect    yvec2;           // observations subset #2
+  Dvect   *xvec  = nullptr; // features (array size is number of examples supported)
+  Dvect   *xvec1 = nullptr; // features subset #1
+  Dvect   *xvec2 = nullptr; // features subset #2
+  Dvect    lvec;            // reults (liklihood) with threshold applied
+  Dvect    cvec;            // confusion vector
+  int      niter;           // number of iterations used
+  int      n1;              // the size of the subset matrix #1
+  double   logl;            // the aggregate log-liklihood
 
   if (argv == 4) {
 	if (read_input(argc, wvec, yvec, &xvec, false)) {
-	  niter = getsoln(wvec, yvec, xvec, 0.001, 10000);
+	  n1 = xmat_split(xvec, yvec, 0.333, &xvec1, &xvec2, yvec1, yvec2);
+	  cout << "  Training data: " << (yvec.size()-n1) << " examples" << endl;
+	  cout << "  Testing data : " <<  n1 << " examples" << endl;
+	  niter = getsoln(wvec, yvec2, xvec2, 0.001, 10000);
 	  cout << endl << "Solution after " << niter << " iterations: " << endl;
-	  cout << wvec << endl;
-	  cout << "Observed y-values:" << endl << yvec << endl << endl;
-	  cout << "Results (liklihood):" << endl;
-	  LLcomp(lvec, wvec, yvec, xvec);
+	  cout << wvec << endl << endl;
+
+	  cout << "Observed training y-values:" << endl 
+		   << setprecision(0) << fixed << yvec2 << endl << endl;
+	  cout << "Training Results (liklihood):" << endl;
+	  LLcomp(lvec, wvec, yvec2, xvec2);
 	  logl = lvec.sum();
 	  lvec.exp_elem();
 	  lvec.apply_threshold(0.999);
 	  cout << setprecision(0) << fixed << lvec << " => " << logl << endl;
-	  calc_conf(cvec,yvec,lvec);
-	  cout << endl << "Confusion numbers:" << endl;
+	  calc_conf(cvec,yvec2,lvec);
+	  cout << endl << "Training Confusion numbers:" << endl;
+	  cout << setprecision(1) << fixed;
+	  cout << "  TP: " << setw(5) << 100*(cvec[TP]/(cvec[TP]+cvec[FP])) 
+		   << "% (" << (int)cvec[TP] << ")" << endl;
+	  cout << "  FP: " << setw(5) << 100*(cvec[FP]/(cvec[TP]+cvec[FP])) 
+		   << "% (" << (int)cvec[FP] << ")" << endl;
+	  cout << "  TN: " << setw(5) << 100*(cvec[TN]/(cvec[TN]+cvec[FN])) 
+		   << "% (" << (int)cvec[TN] << ")" << endl;
+	  cout << "  FN: " << setw(5) << 100*(cvec[FN]/(cvec[TN]+cvec[FN])) 
+		   << "% (" << (int)cvec[FN] << ")" << endl;
+	  cout << "             =====" << endl;
+	  cout << "              " << (int)(cvec[TP]+cvec[FP]+cvec[FN]+cvec[TN]) << endl << endl;
+
+	  cout << "Observed testing y-values:" << endl 
+		   << setprecision(0) << fixed << yvec1 << endl << endl;
+	  cout << "Testing Results (liklihood):" << endl;
+	  LLcomp(lvec, wvec, yvec1, xvec1);
+	  lvec.exp_elem();
+	  lvec.apply_threshold(0.999);
+	  cout << setprecision(0) << fixed << lvec << endl;
+	  calc_conf(cvec,yvec1,lvec);
+	  cout << endl << "Testing Confusion numbers:" << endl;
 	  cout << setprecision(1) << fixed;
 	  cout << "  TP: " << setw(5) << 100*(cvec[TP]/(cvec[TP]+cvec[FP])) 
 		   << "% (" << (int)cvec[TP] << ")" << endl;
@@ -150,15 +184,6 @@ int getsoln(Dvect &w, Dvect &y, Dvect *x, double epsilon, int maxiter) {
 ** confusion matrix using the observed y values and the calculated y-values
 ** as inputs.
 */
-void gen_conf_matrix(Dvect &yo, Dvect &yc) {
-
-}
-
-/*
-** The gen_conf_matrix() function calculates and displays (to stdout) a
-** confusion matrix using the observed y values and the calculated y-values
-** as inputs.
-*/
 void calc_conf(Dvect &conf, Dvect &yo, Dvect &yc) {
   conf.resize(4);
   if (yo.size() == yc.size()) {
@@ -170,6 +195,43 @@ void calc_conf(Dvect &conf, Dvect &yo, Dvect &yc) {
 	}
   }
 }
+
+/*
+** The xmat_split() function takes an input matrix and splits it into
+** two subsets of the data.  The fraction that goes to the first
+** output matrix is given by the second argument.
+*/
+int xmat_split(Dvect *x_input, Dvect &y_input, double fract1, 
+			   Dvect **xout1, Dvect **xout2, Dvect &yout1,
+			   Dvect &yout2) {
+  int    n1, n2;  // number of examples for matrix #1 & #2
+  int    nsize;   // size of input
+  int    i, j, k; // counters
+  double d;       // discriminator
+
+  if ((fract1 >= 0.0) && (fract1 <= 1.0)) {
+	nsize  = y_input.size();
+	n1     = (int)(fract1 * nsize);
+	n2     = (int)(nsize - n1);
+
+	*xout1 = new Dvect[n1];
+	*xout2 = new Dvect[n2];
+	yout1.resize(n1);
+	yout2.resize(n2);
+
+	j = k = 0;
+	for (int i=0; i < nsize; i++) {
+	  d = 0;
+	  if ((d < fract1) && (j < n1)) 
+		{ (*xout1)[j] = x_input[i]; yout1[j] = y_input[i]; j++; }
+	  else 
+		{ (*xout2)[k] = x_input[i]; yout2[k] = y_input[i]; k++; }
+	} // end for loop (i)
+
+  } // end if (fract1) 
+
+  return n1;
+} // end xmat_split()
 
 /*
 ** The read_input() function reads the input files and stores the data in
