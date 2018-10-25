@@ -90,10 +90,16 @@ int main(int argv, char **argc) {
   Dvect   *xvec1 = nullptr; // features subset #1
   Dvect   *xvec2 = nullptr; // features subset #2
   Dvect    lvec;            // reults (liklihood) with threshold applied
+  Dvect    llvec;           // log liklihood components
   Dvect    cvec;            // confusion vector
   int      niter;           // number of iterations used
   int      n1;              // the size of the subset matrix #1
   double   logl;            // the aggregate log-liklihood
+  double   thr;             // threshold
+  double   tpr, fpr;        // true positive rate, false positive rate
+  double   optTPR, optFPR;  // optimal tpr/fpr pair
+  double   optTHR;          // optimal threshold
+  double   dist, optDIST;   // distance from optimal
 
   if (argv == 4) {
 	if (read_input(argc, wvec, yvec, &xvec, false)) {
@@ -107,11 +113,12 @@ int main(int argv, char **argc) {
 	  cout << "Observed training y-values:" << endl 
 		   << setprecision(0) << fixed << yvec2 << endl << endl;
 	  cout << "Training Results (liklihood):" << endl;
-	  LLcomp(lvec, wvec, yvec2, xvec2);
+	  LLcomp(llvec, wvec, yvec2, xvec2);
+	  lvec = llvec;
 	  logl = lvec.sum();
 	  lvec.exp_elem();
 	  lvec.apply_threshold(0.999);
-	  cout << setprecision(0) << fixed << lvec << " => " << logl << endl;
+	  cout << setprecision(0) << fixed << lvec << endl;
 	  calc_conf(cvec,yvec2,lvec);
 	  cout << endl << "Training Confusion numbers:" << endl;
 	  cout << setprecision(1) << fixed;
@@ -126,15 +133,47 @@ int main(int argv, char **argc) {
 	  cout << "             =====" << endl;
 	  cout << "              " << (int)(cvec[TP]+cvec[FP]+cvec[FN]+cvec[TN]) << endl << endl;
 
+	  LLcomp(llvec, wvec, yvec1, xvec1);
+
+	  cout << "  Threshold   TPR    FPR    Distance From Optimal" << endl;
+	  cout << "  =========   =====  =====  =====================" << endl;
+	  cout << "      0.000   1.00   1.00   1.00" << endl;
+	  thr = 0.0;
+	  optDIST = 1.0;
+	  for (int i=0; i<50; i++) {
+		thr += 0.01998;
+		lvec = llvec;
+		lvec.exp_elem();
+		lvec.apply_threshold(thr);
+		calc_conf(cvec,yvec1,lvec);
+		tpr = (cvec[TP]/(cvec[TP]+cvec[FN]));
+		fpr = (cvec[FP]/(cvec[FP]+cvec[TN]));
+		dist = (tpr - 1.0)*(tpr - 1.0) + fpr*fpr;
+		if (dist < optDIST) 
+		  { optDIST = dist; optTPR = tpr; optFPR = fpr; optTHR = thr; }
+		cout << setprecision(3)
+			 << "  " << setw(9) << thr
+			 << setprecision(2)
+			 << "  " << setw(5) << tpr
+			 << "  " << setw(5) << fpr
+			 << "  " << setw(5) << dist << endl; 
+	  }
+	  cout << "      1.000   0.00   0.00   1.00" << endl;
+
+	  cout << endl;
+	  cout << "Optimal threshold: " << setprecision(3) << optTHR << " (TPR = " 
+		   << optTPR << ", FPR = " << setprecision(2) << optFPR << ")" << endl; 
+
+	  lvec = llvec;
+	  lvec.exp_elem();
+	  lvec.apply_threshold(optTHR);
+	  calc_conf(cvec,yvec1,lvec);
+	  cout << endl;
 	  cout << "Observed testing y-values:" << endl 
 		   << setprecision(0) << fixed << yvec1 << endl << endl;
-	  cout << "Testing Results (liklihood):" << endl;
-	  LLcomp(lvec, wvec, yvec1, xvec1);
-	  lvec.exp_elem();
-	  lvec.apply_threshold(0.999);
+	  cout << "Optimal Testing Results (liklihood):" << endl;
 	  cout << setprecision(0) << fixed << lvec << endl;
-	  calc_conf(cvec,yvec1,lvec);
-	  cout << endl << "Testing Confusion numbers:" << endl;
+	  cout << endl << "Optimal Testing Confusion numbers:" << endl;
 	  cout << setprecision(1) << fixed;
 	  cout << "  TP: " << setw(5) << 100*(cvec[TP]/(cvec[TP]+cvec[FP])) 
 		   << "% (" << (int)cvec[TP] << ")" << endl;
