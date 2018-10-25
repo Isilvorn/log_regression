@@ -135,6 +135,8 @@ int main(int argv, char **argc) {
 
 	  LLcomp(llvec, wvec, yvec1, xvec1);
 
+	  cout << "  *********** TESTING ROC CURVE DATA ************" << endl;
+	  cout << "  ***********************************************" << endl << endl;
 	  cout << "  Threshold   TPR    FPR    Distance From Optimal" << endl;
 	  cout << "  =========   =====  =====  =====================" << endl;
 	  cout << "      0.000   1.00   1.00   1.00" << endl;
