@@ -254,8 +254,8 @@ void calc_conf(Dvect &conf, Dvect &yo, Dvect &yc) {
 }
 
 /*
-** The xmat_split() function takes an input matrix and splits it into
-** two subsets of the data.  The fraction that goes to the first
+** The xmat_split() function takes an input matrix and randomly splits 
+** it into two subsets of the data.  The fraction that goes to the first
 ** output matrix is given by the second argument.
 */
 int xmat_split(Dvect *x_input, Dvect &y_input, double fract1, 
@@ -265,6 +265,10 @@ int xmat_split(Dvect *x_input, Dvect &y_input, double fract1,
   int    nsize;   // size of input
   int    i, j, k; // counters
   double d;       // discriminator
+
+  // random number generator
+  default_random_engine generator; 
+  uniform_real_distribution<double> distrib(0.0,1.0);
 
   if ((fract1 >= 0.0) && (fract1 <= 1.0)) {
 	nsize  = y_input.size();
@@ -278,7 +282,7 @@ int xmat_split(Dvect *x_input, Dvect &y_input, double fract1,
 
 	j = k = 0;
 	for (int i=0; i < nsize; i++) {
-	  d = 0;
+	  d = distrib(generator);
 	  if ((d < fract1) && (j < n1)) 
 		{ (*xout1)[j] = x_input[i]; yout1[j] = y_input[i]; j++; }
 	  else 
