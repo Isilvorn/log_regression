@@ -74,6 +74,9 @@ void   calc_conf(Dvect&, Dvect&, Dvect&);
 //            x-matrix1-output, x-matrix2-output, y-matrix1-output,
 //            y-matrix2-output)
 int xmat_split(Dvect*, Dvect&, double, Dvect**, Dvect**, Dvect&, Dvect&);
+// outputs the FPR/TPR data in a format that will allow the custom html file
+// to display it as a graphic
+void outdata(Dvect&, Dvect&, string); 
 
 int main(int argv, char **argc) {
 
@@ -135,17 +138,11 @@ int main(int argv, char **argc) {
 
 	  LLcomp(llvec, wvec, yvec1, xvec1);
 
-	  ofstream outfile;
-	  bool     write_outfile = false;
-	  outfile.open("roc_output.dat");
-	  if (outfile.is_open() == true) write_outfile = true;
-
 	  cout << "  *********** TESTING ROC CURVE DATA ************" << endl;
 	  cout << "  ***********************************************" << endl << endl;
 	  cout << "  Threshold   FPR    TPR    Distance From Optimal" << endl;
 	  cout << "  =========   =====  =====  =====================" << endl;
 	  cout << "      0.000   1.00   1.00   1.00" << endl;
-	  if (write_outfile) outfile << "1.000 1.000" << endl;
 
 	  thr = 0.0;
 	  optDIST = 1.0;
@@ -167,18 +164,12 @@ int main(int argv, char **argc) {
 			 << "  " << setw(5) << fpr
 			 << "  " << setw(5) << tpr
 			 << "  " << setw(5) << dist << endl; 
-
-		if (write_outfile) {
-		  outfile << setprecision(3) << fixed
-				  << setw(5) << fpr << " " << setw(5) << tpr << endl;
-		}
-
 	  }
 	  cout << "      1.000   0.00   0.00   1.00" << endl;
-	  if (write_outfile) outfile << "0.000 0.000" << endl;
-	  if (write_outfile) outfile.close();
-
 	  cout << endl;
+
+	  outdata(llvec, yvec1, "setdata.js");
+
 	  cout << "Optimal threshold: " << setprecision(3) << optTHR << " (TPR = " 
 		   << optTPR << ", FPR = " << setprecision(2) << optFPR << ")" << endl; 
 
@@ -345,6 +336,40 @@ bool read_input(char **argc, Dvect &w, Dvect &y, Dvect **x, bool verbose) {
   
   return true;
 }
+
+void outdata(Dvect &llvec, Dvect &yvec, string fname) {
+  ofstream outfile;    // output file
+  double   thr = 0.0;  // threshold
+  double   tpr, fpr;   // temp variables for true/false postive rates
+  double   dist;       // distance from optimal
+  Dvect    lvec, cvec; // liklihood and counter vectors
+
+  outfile.open(fname);
+  if (outfile.is_open()) {
+    outfile << "function setdata() {" << endl;
+    outfile << "var inputvar = " << endl;
+    outfile << "[ [ 1.000, 1.000, 1.000 ]," << endl;
+    for (int i=0; i<50; i++) {
+      thr += 0.01998;
+      lvec = llvec;
+      lvec.exp_elem();
+      lvec.apply_threshold(thr);
+      calc_conf(cvec,yvec,lvec);
+      tpr = (cvec[TP]/(cvec[TP]+cvec[FN]));
+      fpr = (cvec[FP]/(cvec[FP]+cvec[TN]));
+      dist = (tpr - 1.0)*(tpr - 1.0) + fpr*fpr;
+      outfile << setprecision(3) << fixed
+	      << "  [ " << setw(5) << fpr  << ", " << setw(5) << tpr 
+	      << ", " << setw(5) << dist << " ]," << endl;
+    }
+    outfile << "  [ 0.000, 0.000, 1.000 ] ];" << endl;
+    outfile << "return inputvar;" << endl;
+    outfile << "}" << endl;
+    outfile.close();
+  } // end if (outfile) 
+
+} // end outdata()
+
 
 void grad(Dvect &ret, Dvect &w, Dvect &y, Dvect *x) {
   double wTx, f;
