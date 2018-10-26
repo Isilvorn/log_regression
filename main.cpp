@@ -135,11 +135,18 @@ int main(int argv, char **argc) {
 
 	  LLcomp(llvec, wvec, yvec1, xvec1);
 
+	  ofstream outfile;
+	  bool     write_outfile = false;
+	  outfile.open("roc_output.dat");
+	  if (outfile.is_open() == true) write_outfile = true;
+
 	  cout << "  *********** TESTING ROC CURVE DATA ************" << endl;
 	  cout << "  ***********************************************" << endl << endl;
-	  cout << "  Threshold   TPR    FPR    Distance From Optimal" << endl;
+	  cout << "  Threshold   FPR    TPR    Distance From Optimal" << endl;
 	  cout << "  =========   =====  =====  =====================" << endl;
 	  cout << "      0.000   1.00   1.00   1.00" << endl;
+	  if (write_outfile) outfile << "1.000 1.000" << endl;
+
 	  thr = 0.0;
 	  optDIST = 1.0;
 	  for (int i=0; i<50; i++) {
@@ -153,14 +160,23 @@ int main(int argv, char **argc) {
 		dist = (tpr - 1.0)*(tpr - 1.0) + fpr*fpr;
 		if (dist < optDIST) 
 		  { optDIST = dist; optTPR = tpr; optFPR = fpr; optTHR = thr; }
+
 		cout << setprecision(3)
 			 << "  " << setw(9) << thr
 			 << setprecision(2)
-			 << "  " << setw(5) << tpr
 			 << "  " << setw(5) << fpr
+			 << "  " << setw(5) << tpr
 			 << "  " << setw(5) << dist << endl; 
+
+		if (write_outfile) {
+		  outfile << setprecision(3) << fixed
+				  << setw(5) << fpr << " " << setw(5) << tpr << endl;
+		}
+
 	  }
 	  cout << "      1.000   0.00   0.00   1.00" << endl;
+	  if (write_outfile) outfile << "0.000 0.000" << endl;
+	  if (write_outfile) outfile.close();
 
 	  cout << endl;
 	  cout << "Optimal threshold: " << setprecision(3) << optTHR << " (TPR = " 
