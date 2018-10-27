@@ -337,6 +337,15 @@ bool read_input(char **argc, Dvect &w, Dvect &y, Dvect **x, bool verbose) {
   return true;
 }
 
+/*
+** The outdata() function writes the output ROC data to a javascript file
+** in order to get around the security precaution that most modern browsers
+** utilize that prevents web pages from reading arbitrary file types from
+** from the local file system.  HTML and Javascript are allowed, so this
+** function writes the file in the style of a javascript function that 
+** explicitly sets array data when called. The return value is the data
+** for the ROC curve.
+*/
 void outdata(Dvect &llvec, Dvect &yvec, string fname) {
   ofstream outfile;    // output file
   double   thr = 0.0;  // threshold
@@ -370,7 +379,12 @@ void outdata(Dvect &llvec, Dvect &yvec, string fname) {
 
 } // end outdata()
 
-
+/*
+** The grad() function alculates the gradient for the logistic function given
+** a set of weights, the observed y-values, and the input features (x).  The
+** results of the calculation are stored in the "ret" variable that is supplied
+** as an argument and passed by reference.
+*/
 void grad(Dvect &ret, Dvect &w, Dvect &y, Dvect *x) {
   double wTx, f;
   Dvect  a, c;
@@ -386,6 +400,12 @@ void grad(Dvect &ret, Dvect &w, Dvect &y, Dvect *x) {
 
 }
 
+/*
+** The gradest() function is an estimate of the logistic function gradient calculated
+** by selecting two points on the logistic curve that are close together and 
+** determining the slope. This is used to double-check the results of the grad()
+** function when the results are in doubt.
+*/
 void gradest(Dvect &ret, Dvect &w, Dvect &y, Dvect *x) {
   double wTx, alpha, x1, x2, y1, y2, l1, l2;
   Dvect  w1, w2;
@@ -427,6 +447,7 @@ void getnext(Dvect &w, Dvect &dk, double speed) {
 
 /*
 ** Calculate the components of the Log Liklihood (LL) objective function.
+** The result is a vector that is sized to the number of examples.
 */
 void LLcomp(Dvect &l, Dvect &w, Dvect &y, Dvect *x) {
   double wTx, a, b;
@@ -473,7 +494,7 @@ istream& operator>>(istream& is, Dvect& v) {
 }
 
 /*
-** Default constructor.
+** The default constructor simply creates an empty vector of zero size.
 */
 Dvect::Dvect(void) { 
   a  = nullptr;
@@ -481,7 +502,8 @@ Dvect::Dvect(void) {
 }
 
 /*
-** Alternate constructor.
+** The alternate constructor creates a vector of size n with all of the elements
+** set to zero.
 */
 Dvect::Dvect(int n) { 
   // setting "a" to nullptr so that the resize function does not attempt to delete it
@@ -491,7 +513,8 @@ Dvect::Dvect(int n) {
 }
 
 /*
-** Copy constructor.
+** The copy constructor creates a new vector that is exactly like the input vector,
+** but occupies distinctly different memory.
 */
 Dvect::Dvect(const Dvect &v) {
   // setting "a" to nullptr so that the resize function does not attempt to delete it
@@ -500,6 +523,9 @@ Dvect::Dvect(const Dvect &v) {
   if (resize(v.size())) copy(v);
 }
 
+/*
+** The destructor deallocates any memory that was allocated.
+*/
 Dvect::~Dvect(void) {
   // deallocating the memory set aside for the vector
   if (a != nullptr) delete a;
@@ -514,9 +540,9 @@ inline void   Dvect::set(int i,double d)  { if (i < sz) a[i] = d; }
 inline int    Dvect::size(void) const     { return sz; }
 
 /*
-** The "*=" operator when used with two vectors multiplies each of the vectors
-** together element-by-element.  This does not correspond to a true matrix multiplication.
-** If the vectors are not of equal size, it does nothing.
+** The "*=" unary operator multiplies another vector with this one element-by-element.  
+** This does not correspond to a true matrix multiplication. If the vectors are not of 
+** equal size, it does nothing.
 */
 Dvect& Dvect::operator*=(const Dvect &v) {
   if (v.size() == sz) {	for (int i=0; i<sz; i++) a[i] *= v.a[i]; }
@@ -543,7 +569,8 @@ Dvect Dvect::operator*(const double d) {
 
 /*
 ** This version of the  "*" operator multiplies two vectors together element-by-element. 
-** If the vectors are not of equal size, it returns the vector on the lhs of the "*".
+** If the vectors are not of equal size, it returns the vector on the lhs of the "*"
+** operator.
 */
 Dvect Dvect::operator*(const Dvect &v) {
   Dvect vreturn(*this);
@@ -552,8 +579,8 @@ Dvect Dvect::operator*(const Dvect &v) {
 }
 
 /*
-** The "+=" operator when used with two vectors adds another vector element-by-element.
-** to this one. If the vectors are not of equal size, it does nothing.
+** The "+=" operator adds another vector with this one element-by-element.
+** If the vectors are not of equal size, it does nothing.
 */
 Dvect& Dvect::operator+=(const Dvect &v) {
   if (v.size() == sz) {	for (int i=0; i<sz; i++) a[i] += v.a[i]; }
@@ -571,8 +598,8 @@ Dvect Dvect::operator+(const Dvect &v) {
 }
 
 /*
-** The "-=" operator when used with two vectors subtracts another vector element-by-element.
-** from this one. If the vectors are not of equal size, it does nothing.
+** The "-=" operator subtracts another vector from this one element-by-element.
+** If the vectors are not of equal size, it does nothing.
 */
 Dvect& Dvect::operator-=(const Dvect &v) {
   if (v.size() == sz) {	for (int i=0; i<sz; i++) a[i] -= v.a[i]; }
@@ -590,8 +617,8 @@ Dvect Dvect::operator-(const Dvect &v) {
 }
 
 /*
-** This assignment operator uses the copy() function to copy from one vector to another
-** as long as they are the same size.  Otherwise it does nothing.
+** This assignment operator uses the copy() function to copy from one vector to this one.
+** This vector is resized to correspond to the input vector and then the data is copied.
 */
 Dvect& Dvect::operator=(const Dvect &v) {
   resize(v.size());
@@ -609,32 +636,38 @@ Dvect& Dvect::operator=(const double d) {
 }
 
 /*
-** The bracket ("[]") operator allows accessing an individual element in the vector.
+** The bracket ("[]") operator allows accessing an individual element in the vector. If
+** an index is chosen that is greater than the size of the vector, the last element in
+** the vector is returned.  There is no protection for submitting a negative index; it is
+** assumed that the user of this class would know that negative numbers are categorically
+** illegal in this context.  The first version is the "get" version of the bracket overload,
+** while the next version is the "set" version of the bracket overload.
 */
 double Dvect::operator[](int i) const{
   if (i < sz) return a[i]; else return a[sz-1];
 }
-
 double& Dvect::operator[](int i) {
   if (i < sz) return a[i]; else return a[sz-1];
 }
 
 
 /*
-** The resize() function resizes the vectors and destroys the data (sets to zero).
+** The resize() function resizes the vectors and destroys any data that might already
+** exist (sets all elements to zero).
 */
 bool Dvect::resize(int n) {
   // if the array is already allocated, deallocate it
   if (a != nullptr) delete a;
   // allocating a new vector ("a" for array)
+  a = nullptr;
   a = new double[n];
   // if the allocation was a success, the size is stored in "size"
-  // otherwise, size is set to -1
-  if (a != nullptr) sz = n; else sz = -1;
+  // otherwise, size is set to 0 and failure is returned
+  if (a != nullptr) sz = n; else { sz = 0; return false; }
   // initializing the new vector with all zeroes
   for (int i=0; i<n; i++) a[i]=0;
-
-  if (sz == -1) return false; else return true;
+  // return success
+  return true;
 }
 
 /*
