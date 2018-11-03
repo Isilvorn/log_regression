@@ -66,6 +66,8 @@ void   getnext(Dvect&, Dvect&, double);
 // iterate to a solution: 
 // getsoln(weights, y-objserved, features, delta-criteria, max-iterations)
 int    getsoln(Dvect&, Dvect&, Dvect*, double=0.001, int=100);
+// the predictive function
+void   pred(Dvect&, Dvect&, Dvect*);
 // calculates True Positives (TP), False Positives (FP), True Negatives(TN),
 // and False Negatives (FN)
 void   calc_conf(Dvect&, Dvect&, Dvect&);
@@ -116,10 +118,8 @@ int main(int argv, char **argc) {
 	  cout << "Observed training y-values:" << endl 
 		   << setprecision(0) << fixed << yvec2 << endl << endl;
 	  cout << "Training Results (liklihood):" << endl;
-	  LLcomp(llvec, wvec, yvec2, xvec2);
-	  lvec = llvec;
-	  logl = lvec.sum();
-	  lvec.exp_elem();
+	  lvec.resize(yvec2.size());
+	  pred(lvec, wvec, xvec2);
 	  lvec.apply_threshold(0.999);
 	  cout << setprecision(0) << fixed << lvec << endl;
 	  calc_conf(cvec,yvec2,lvec);
@@ -136,7 +136,8 @@ int main(int argv, char **argc) {
 	  cout << "             =====" << endl;
 	  cout << "              " << (int)(cvec[TP]+cvec[FP]+cvec[FN]+cvec[TN]) << endl << endl;
 
-	  LLcomp(llvec, wvec, yvec1, xvec1);
+	  llvec.resize(yvec1.size());
+	  pred(llvec, wvec, xvec1);
 
 	  cout << "  *********** TESTING ROC CURVE DATA ************" << endl;
 	  cout << "  ***********************************************" << endl << endl;
@@ -149,7 +150,6 @@ int main(int argv, char **argc) {
 	  for (int i=0; i<50; i++) {
 		thr += 0.01998;
 		lvec = llvec;
-		lvec.exp_elem();
 		lvec.apply_threshold(thr);
 		calc_conf(cvec,yvec1,lvec);
 		tpr = (cvec[TP]/(cvec[TP]+cvec[FN]));
@@ -172,9 +172,7 @@ int main(int argv, char **argc) {
 
 	  cout << "Optimal threshold: " << setprecision(3) << optTHR << " (TPR = " 
 		   << optTPR << ", FPR = " << setprecision(2) << optFPR << ")" << endl; 
-
 	  lvec = llvec;
-	  lvec.exp_elem();
 	  lvec.apply_threshold(optTHR);
 	  calc_conf(cvec,yvec1,lvec);
 	  cout << endl;
@@ -361,7 +359,6 @@ void outdata(Dvect &llvec, Dvect &yvec, string fname) {
     for (int i=0; i<50; i++) {
       thr += 0.01998;
       lvec = llvec;
-      lvec.exp_elem();
       lvec.apply_threshold(thr);
       calc_conf(cvec,yvec,lvec);
       tpr = (cvec[TP]/(cvec[TP]+cvec[FN]));
@@ -467,6 +464,18 @@ double LL(Dvect &w, Dvect &y, Dvect *x) {
   Dvect ret;
   LLcomp(ret, w, y, x);
   return ret.sum();
+}
+
+/*
+** The predictive function. "y" is the output in this case.
+*/
+void pred(Dvect &y, Dvect &w, Dvect *x) {
+  double wTx;
+
+  for (int i=0; i<y.size(); i++) {
+    wTx  = (w * x[i]).sum();
+    y[i] = exp(wTx)/(1 + exp(wTx));
+  }
 }
 
 /*
