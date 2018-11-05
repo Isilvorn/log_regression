@@ -15,3 +15,4 @@ temp/dvect.o: src/dvect.cpp
 clean:
 	rm -f *~
 	rm temp/*.o
+	rm logr
