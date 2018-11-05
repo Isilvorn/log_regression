@@ -118,6 +118,7 @@ int main(int argv, char **argc) {
 	  cout << "Observed training y-values:" << endl 
 		   << setprecision(0) << fixed << yvec2 << endl << endl;
 	  cout << "Training Results (liklihood):" << endl;
+
 	  lvec.resize(yvec2.size());
 	  pred(lvec, wvec, xvec2);
 	  lvec.apply_threshold(0.999);

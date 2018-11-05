@@ -1,9 +1,13 @@
 all: logr
 
-logr: logr.o
-	g++ -std=c++11 -g logr.o
+logr: temp/logr.o
+	g++ -std=c++11 -g temp/logr.o
 	mv a.out logr
 
-logr.o: main.cpp
-	g++ -std=c++11 -c main.cpp
-	mv main.o logr.o
+temp/logr.o: src/main.cpp
+	g++ -std=c++11 -c src/main.cpp
+	mv main.o temp/logr.o
+
+clean:
+	rm -f *~
+	rm temp/*
